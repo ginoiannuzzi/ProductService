@@ -1,33 +1,89 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using ProductService.Data.Context;
+using ProductService.Data.Models;
 
 namespace ProductService.Controllers
 {
+    [Route("api/products")]
     [ApiController]
-    [Route("[controller]")]
-    public class WeatherForecastController : ControllerBase
+    public class ProductsController : ControllerBase
     {
-        private static readonly string[] Summaries = new[]
-        {
-            "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-        };
+        private readonly ApplicationDbContext _context;
 
-        private readonly ILogger<WeatherForecastController> _logger;
-
-        public WeatherForecastController(ILogger<WeatherForecastController> logger)
+        public ProductsController(ApplicationDbContext context)
         {
-            _logger = logger;
+            _context = context;
         }
 
-        [HttpGet(Name = "GetWeatherForecast")]
-        public IEnumerable<WeatherForecast> Get()
+        // GET: api/products
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<Product>>> GetProducts()
         {
-            return Enumerable.Range(1, 5).Select(index => new WeatherForecast
-            {
-                Date = DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-                TemperatureC = Random.Shared.Next(-20, 55),
-                Summary = Summaries[Random.Shared.Next(Summaries.Length)]
-            })
-            .ToArray();
+            return await _context.Products.Include(p => p.Subcategory).ToListAsync();
+        }
+
+        // GET: api/products/{id}
+        [HttpGet("{id}")]
+        public async Task<ActionResult<Product>> GetProduct(Guid id)
+        {
+            var product = await _context.Products.Include(p => p.Subcategory)
+                                                 .FirstOrDefaultAsync(p => p.Id == id);
+            if (product == null)
+                return NotFound();
+
+            return product;
+        }
+
+        // POST: api/products
+        [HttpPost]
+        public async Task<ActionResult<Product>> CreateProduct(Product product)
+        {
+            product.Id = Guid.NewGuid();
+            product.CreatedAt = DateTime.UtcNow;
+            product.UpdatedAt = DateTime.UtcNow;
+
+            _context.Products.Add(product);
+            await _context.SaveChangesAsync();
+
+            return CreatedAtAction(nameof(GetProduct), new { id = product.Id }, product);
+        }
+
+        // PUT: api/products/{id}
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateProduct(Guid id, Product product)
+        {
+            if (id != product.Id)
+                return BadRequest();
+
+            var existingProduct = await _context.Products.FindAsync(id);
+            if (existingProduct == null)
+                return NotFound();
+
+            existingProduct.Ski = product.Ski;
+            existingProduct.Name = product.Name;
+            existingProduct.Description = product.Description;
+            existingProduct.SubcategoryId = product.SubcategoryId;
+            existingProduct.UpdatedAt = DateTime.UtcNow;
+
+            _context.Entry(existingProduct).State = EntityState.Modified;
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+        }
+
+        // DELETE: api/products/{id}
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteProduct(Guid id)
+        {
+            var product = await _context.Products.FindAsync(id);
+            if (product == null)
+                return NotFound();
+
+            _context.Products.Remove(product);
+            await _context.SaveChangesAsync();
+
+            return NoContent();
         }
     }
 }
