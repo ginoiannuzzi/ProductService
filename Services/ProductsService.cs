@@ -21,7 +21,6 @@ namespace ProductService.Services
             if (product == null)
             {
                 _logger.LogWarning("Product with ID {ProductId} not found.", id);
-                return null;
             }
             return product;
         }

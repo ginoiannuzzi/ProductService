@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using ProductService.Data.Context;
 using ProductService.Data.Models;
+using ProductService.Services;
 
 namespace ProductService.Controllers
 {
@@ -9,79 +8,80 @@ namespace ProductService.Controllers
     [ApiController]
     public class ProductsController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IProductsService _productsService;
+        private readonly ILogger<ProductsController> _logger;
 
-        public ProductsController(ApplicationDbContext context)
+        public ProductsController(IProductsService productsService, ILogger<ProductsController> logger)
         {
-            _context = context;
+            _productsService = productsService;
+            _logger = logger;
         }
 
-        // GET: api/products
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<Product>>> GetProducts()
-        {
-            return await _context.Products.Include(p => p.Subcategory).ToListAsync();
-        }
-
-        // GET: api/products/{id}
+        /// <summary>
+        /// Get product by id
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
         [HttpGet("{id}")]
-        public async Task<ActionResult<Product>> GetProduct(Guid id)
+        public async Task<IActionResult> GetProductById(Guid id)
         {
-            var product = await _context.Products.Include(p => p.Subcategory)
-                                                 .FirstOrDefaultAsync(p => p.Id == id);
+            var product = await _productsService.GetProductByIdAsync(id);
             if (product == null)
-                return NotFound();
-
-            return product;
+            {
+                _logger.LogWarning("Product with ID {ProductId} not found.", id);
+                return NotFound(new { message = "Product not found." });
+            }
+            return Ok(product);
         }
 
-        // POST: api/products
+        /// <summary>
+        /// Create product
+        /// </summary>
+        /// <param name="product"></param>
+        /// <returns></returns>
         [HttpPost]
-        public async Task<ActionResult<Product>> CreateProduct(Product product)
+        public async Task<IActionResult> CreateProduct([FromBody] Product product)
         {
-            product.Id = Guid.NewGuid();
-            product.CreatedAt = DateTime.UtcNow;
-            product.UpdatedAt = DateTime.UtcNow;
+            if (product == null)
+                return BadRequest(new { message = "Invalid product data." });
 
-            _context.Products.Add(product);
-            await _context.SaveChangesAsync();
-
-            return CreatedAtAction(nameof(GetProduct), new { id = product.Id }, product);
+            var createdProduct = await _productsService.CreateProductAsync(product);
+            return CreatedAtAction(nameof(GetProductById), new { id = createdProduct.Id }, createdProduct);
         }
 
-        // PUT: api/products/{id}
+        /// <summary>
+        /// Update product
+        /// </summary>
+        /// <param name="id"></param>
+        /// <param name="updatedProduct"></param>
+        /// <returns></returns>
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateProduct(Guid id, Product product)
+        public async Task<IActionResult> UpdateProduct(Guid id, [FromBody] Product updatedProduct)
         {
-            if (id != product.Id)
-                return BadRequest();
+            var product = await _productsService.UpdateProductAsync(id, updatedProduct);
+            if (product == null)
+            {
+                _logger.LogWarning("Product with ID {ProductId} not found for update.", id);
+                return NotFound(new { message = "Product not found." });
+            }
 
-            var existingProduct = await _context.Products.FindAsync(id);
-            if (existingProduct == null)
-                return NotFound();
-
-            existingProduct.Ski = product.Ski;
-            existingProduct.Name = product.Name;
-            existingProduct.Description = product.Description;
-            existingProduct.SubcategoryId = product.SubcategoryId;
-            existingProduct.UpdatedAt = DateTime.UtcNow;
-
-            _context.Entry(existingProduct).State = EntityState.Modified;
-            await _context.SaveChangesAsync();
-
-            return NoContent();
+            return Ok(product);
         }
 
-        // DELETE: api/products/{id}
+        /// <summary>
+        /// Delete product
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteProduct(Guid id)
         {
-            var product = await _context.Products.FindAsync(id);
-            if (product == null)
-                return NotFound();
-
-            _context.Products.Remove(product);
-            await _context.SaveChangesAsync();
+            var success = await _productsService.DeleteProductAsync(id);
+            if (!success)
+            {
+                _logger.LogWarning("Product with ID {ProductId} not found for deletion.", id);
+                return NotFound(new { message = "Product not found." });
+            }
 
             return NoContent();
         }
