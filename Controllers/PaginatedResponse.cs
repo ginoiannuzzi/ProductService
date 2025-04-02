@@ -1,4 +1,4 @@
-﻿using ProductService.Data.Models;
+﻿using ProductService.Models;
 
 namespace ProductService.Controllers
 {

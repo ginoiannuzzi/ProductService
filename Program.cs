@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.StackExchangeRedis;
-using ProductService.Data.Context;
 using ProductService.Services;
+using ProductService.Services.Context;
 
 var builder = WebApplication.CreateBuilder(args);
 

@@ -20,7 +20,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Tests\" />
+    <Folder Include="Data\Context\" />
+    <Folder Include="Data\Models\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ProductService.Services\ProductService.Services.csproj" />
   </ItemGroup>
 
 </Project>

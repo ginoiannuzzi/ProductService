@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using ProductService.Data.Models;
+using ProductService.Models;
 using ProductService.Services;
 
 namespace ProductService.Controllers
