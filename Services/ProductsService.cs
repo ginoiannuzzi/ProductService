@@ -88,10 +88,7 @@ namespace ProductService.Services
                 query = query.Where(p => p.Ski.Contains(productCode));
             }
 
-            var totalCount = await query.CountAsync();
             var products = await query
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
                 .Include(p => p.Subcategory)
                 .ToListAsync();
 

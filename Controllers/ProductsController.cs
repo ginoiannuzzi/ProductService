@@ -85,5 +85,40 @@ namespace ProductService.Controllers
 
             return NoContent();
         }
+
+        /// <summary>
+        /// List products
+        /// </summary>
+        /// <param name="page"></param>
+        /// <param name="pageSize"></param>
+        /// <param name="productCode"></param>
+        /// <returns></returns>
+        [HttpGet("list")]
+        public async Task<IActionResult> GetProducts([FromQuery] int page = 1, [FromQuery] int pageSize = 10, [FromQuery] string? productCode = null)
+        {
+            if (page < 1 || pageSize < 1)
+            {
+                return BadRequest(new { Message = "Page and pageSize must be greater than zero." });
+            }
+
+            var products = await _productsService.GetProductsAsync(productCode, page, pageSize);
+
+            int totalCount = products.Count;
+            int totalPages = totalCount / pageSize + (totalCount % pageSize == 0 ? 0 : 1);
+
+            var paginatedProducts = products
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            return Ok(new PaginatedResponse()
+            {
+                CurrentPage = page,
+                Items = paginatedProducts,
+                PageSize = pageSize,
+                TotalCount = totalCount,
+                TotalPages = totalPages
+            });
+        }
     }
 }
